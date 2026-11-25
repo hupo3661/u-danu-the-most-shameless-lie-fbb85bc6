@@ -96,7 +96,7 @@ def rule_text_safe(entry: str) -> Optional[str]:
         entry.encode("utf-8")
     except UnicodeEncodeError:
         return "entry is not valid UTF-8"
-    bad = [c for c in entry if ord(c) < 0x20 and c != "\t"]
+    bad = [c for c in entry if (ord(c) < 0x20 and c != "\t") or ord(c) == 0x7F]
     if bad:
         joined = ", ".join(f"U+{ord(c):04X}" for c in bad)
         return f"entry contains control characters: {joined}"
@@ -187,10 +187,14 @@ class Sink:
 
 def main() -> int:
     """Validate, write, verify, and report. Returns a process exit code."""
-    validate_entry(ENTRY)
-    sink = Sink(ENTRY)
-    sink.write()
-    sink.verify()
+    try:
+        validate_entry(ENTRY)
+        sink = Sink(ENTRY)
+        sink.write()
+        sink.verify()
+    except EntryError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     print(sink.report())
     return 0
 
